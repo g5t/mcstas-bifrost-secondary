@@ -1,0 +1,172 @@
+//Auto generated file, Edit Multi_Cassette.sh instead!
+
+COMPONENT CassetteArm0 = Arm()
+WHEN 0==cassette AT (0, 0, 0) RELATIVE Origin ROTATED (0, params_channel[0]*RAD2DEG, 0) RELATIVE Origin
+
+COMPONENT CassettePSD0 = PSD_monitor(nx=140, ny=90, filename="CassettePSD0.dat", restore_neutron=1,
+                                     yheight=params_analyzer[0][0][2],
+                                     xwidth=params_analyzer[0][0][2])
+WHEN 0==cassette AT (0, 0, 0.95*params_distances[0][0][0]) RELATIVE CassetteArm0
+
+// CASSETTE 0
+
+
+COMPONENT AnaPoint00 = Arm() WHEN noBS && 0==cassette AT (0,0,params_distances[0][0][0]) RELATIVE CassetteArm0
+
+COMPONENT AnaArm00 = Arm() WHEN noBS && 0==cassette AT (0, 0, 0) RELATIVE PREVIOUS ROTATED (0, 0, 90) RELATIVE PREVIOUS
+
+COMPONENT Analyzer00 = Monochromator_Rowland(
+  NH = params_analyzer[0][0][0],
+  zwidth = params_analyzer[0][0][1],
+  yheight = params_analyzer[0][0][2],
+  mosaic = Mos, DM = 3.335, NV = 1,
+  show_construction=construction, focush=focus_type, RH=focus_radius,
+  angle_h=params_analyzer[0][0][5] * RAD2DEG,
+  source="Origin", sink="DetPoint00"
+)
+WHEN noBS && 0==cassette AT (0, 0, 0) RELATIVE PREVIOUS ROTATED (0, -TAS[0], 0) RELATIVE PREVIOUS
+EXTEND %{
+noBS = (SCATTERED) ? 0 : 1;
+analyzer = (SCATTERED) ? 0 : -1;
+%}
+
+// ============================ SCATTERING ANGLE REORIENTATION ======================  
+COMPONENT DetAngle00 = Arm() WHEN 0==cassette && 0==analyzer AT (0, 0, 0) RELATIVE AnaPoint00 ROTATED (0, -(2*TAS[0]), 0) RELATIVE AnaArm00
+// =================================== DETECTOR ==================================== 
+COMPONENT DetPoint00 = Arm() WHEN 0==cassette && 0==analyzer AT (0, 0, params_distances[0][0][1]) RELATIVE DetAngle00
+COMPONENT PSD00 = PSD_monitor(nx=140, ny=90, filename="PSD00.dat", restore_neutron=1,
+                              xwidth=2.1*params_detector[0][0][1][1][1],
+                              yheight=2.1*params_detector[0][0][1][1][1]
+) WHEN 0==cassette && 0==analyzer AT (0, 0, 0) RELATIVE DetPoint00
+
+
+// Cassette 0 Analyzer 0 Triplet Detectors & Event recorders
+
+COMPONENT Triplet00 = Detector_triplet(filename="triplet00.dat", charge_a=charge_a_name, charge_b=charge_b_name, detection_time=detection_time_name,
+  radius = detdiam / 2,
+  x0 = params_detector[0][0][0][0], e0 = params_detector[0][0][0][1],
+  x1 = params_detector[0][0][1][0], e1 = params_detector[0][0][1][1],
+  x2 = params_detector[0][0][2][0], e2 = params_detector[0][0][2][1])
+WHEN 0==cassette && 0==analyzer AT (0, 0, 0) RELATIVE DetPoint00
+EXTEND
+%{
+  flag = (SCATTERED) ? 1 : 0;
+%}
+COMPONENT Events00 = Monitor_nD(xwidth=2.1*params_detector[0][0][1][1][1], yheight=2.1*params_detector[0][0][1][1][1],
+  user1=charge_a_name, username1="A", user2=charge_b_name, username2="B", user3=detection_time_name, username3="T", options=nd_options)
+WHEN 1==flag && 0==cassette && 0==analyzer AT (0, 0, params_detector[0][0][1][1][1]) RELATIVE PREVIOUS
+
+
+COMPONENT CassetteArm1 = Arm()
+WHEN 1==cassette AT (0, 0, 0) RELATIVE Origin ROTATED (0, params_channel[1]*RAD2DEG, 0) RELATIVE Origin
+
+COMPONENT CassettePSD1 = PSD_monitor(nx=140, ny=90, filename="CassettePSD1.dat", restore_neutron=1,
+                                     yheight=params_analyzer[1][0][2],
+                                     xwidth=params_analyzer[1][0][2])
+WHEN 1==cassette AT (0, 0, 0.95*params_distances[1][0][0]) RELATIVE CassetteArm1
+
+// CASSETTE 1
+
+
+COMPONENT AnaPoint10 = Arm() WHEN noBS && 1==cassette AT (0,0,params_distances[1][0][0]) RELATIVE CassetteArm1
+
+COMPONENT AnaArm10 = Arm() WHEN noBS && 1==cassette AT (0, 0, 0) RELATIVE PREVIOUS ROTATED (0, 0, 90) RELATIVE PREVIOUS
+
+COMPONENT Analyzer10 = Monochromator_Rowland(
+  NH = params_analyzer[1][0][0],
+  zwidth = params_analyzer[1][0][1],
+  yheight = params_analyzer[1][0][2],
+  mosaic = Mos, DM = 3.335, NV = 1,
+  show_construction=construction, focush=focus_type, RH=focus_radius,
+  angle_h=params_analyzer[1][0][5] * RAD2DEG,
+  source="Origin", sink="DetPoint10"
+)
+WHEN noBS && 1==cassette AT (0, 0, 0) RELATIVE PREVIOUS ROTATED (0, -TAS[0], 0) RELATIVE PREVIOUS
+EXTEND %{
+noBS = (SCATTERED) ? 0 : 1;
+analyzer = (SCATTERED) ? 0 : -1;
+%}
+
+// ============================ SCATTERING ANGLE REORIENTATION ======================  
+COMPONENT DetAngle10 = Arm() WHEN 1==cassette && 0==analyzer AT (0, 0, 0) RELATIVE AnaPoint10 ROTATED (0, -(2*TAS[0]), 0) RELATIVE AnaArm10
+// =================================== DETECTOR ==================================== 
+COMPONENT DetPoint10 = Arm() WHEN 1==cassette && 0==analyzer AT (0, 0, params_distances[1][0][1]) RELATIVE DetAngle10
+COMPONENT PSD10 = PSD_monitor(nx=140, ny=90, filename="PSD10.dat", restore_neutron=1,
+                              xwidth=2.1*params_detector[1][0][1][1][1],
+                              yheight=2.1*params_detector[1][0][1][1][1]
+) WHEN 1==cassette && 0==analyzer AT (0, 0, 0) RELATIVE DetPoint10
+
+
+// Cassette 1 Analyzer 0 Triplet Detectors & Event recorders
+
+COMPONENT Triplet10 = Detector_triplet(filename="triplet10.dat", charge_a=charge_a_name, charge_b=charge_b_name, detection_time=detection_time_name,
+  radius = detdiam / 2,
+  x0 = params_detector[1][0][0][0], e0 = params_detector[1][0][0][1],
+  x1 = params_detector[1][0][1][0], e1 = params_detector[1][0][1][1],
+  x2 = params_detector[1][0][2][0], e2 = params_detector[1][0][2][1])
+WHEN 1==cassette && 0==analyzer AT (0, 0, 0) RELATIVE DetPoint10
+EXTEND
+%{
+  flag = (SCATTERED) ? 1 : 0;
+%}
+COMPONENT Events10 = Monitor_nD(xwidth=2.1*params_detector[1][0][1][1][1], yheight=2.1*params_detector[1][0][1][1][1],
+  user1=charge_a_name, username1="A", user2=charge_b_name, username2="B", user3=detection_time_name, username3="T", options=nd_options)
+WHEN 1==flag && 1==cassette && 0==analyzer AT (0, 0, params_detector[1][0][1][1][1]) RELATIVE PREVIOUS
+
+
+COMPONENT CassetteArm2 = Arm()
+WHEN 2==cassette AT (0, 0, 0) RELATIVE Origin ROTATED (0, params_channel[2]*RAD2DEG, 0) RELATIVE Origin
+
+COMPONENT CassettePSD2 = PSD_monitor(nx=140, ny=90, filename="CassettePSD2.dat", restore_neutron=1,
+                                     yheight=params_analyzer[2][0][2],
+                                     xwidth=params_analyzer[2][0][2])
+WHEN 2==cassette AT (0, 0, 0.95*params_distances[2][0][0]) RELATIVE CassetteArm2
+
+// CASSETTE 2
+
+
+COMPONENT AnaPoint20 = Arm() WHEN noBS && 2==cassette AT (0,0,params_distances[2][0][0]) RELATIVE CassetteArm2
+
+COMPONENT AnaArm20 = Arm() WHEN noBS && 2==cassette AT (0, 0, 0) RELATIVE PREVIOUS ROTATED (0, 0, 90) RELATIVE PREVIOUS
+
+COMPONENT Analyzer20 = Monochromator_Rowland(
+  NH = params_analyzer[2][0][0],
+  zwidth = params_analyzer[2][0][1],
+  yheight = params_analyzer[2][0][2],
+  mosaic = Mos, DM = 3.335, NV = 1,
+  show_construction=construction, focush=focus_type, RH=focus_radius,
+  angle_h=params_analyzer[2][0][5] * RAD2DEG,
+  source="Origin", sink="DetPoint20"
+)
+WHEN noBS && 2==cassette AT (0, 0, 0) RELATIVE PREVIOUS ROTATED (0, -TAS[0], 0) RELATIVE PREVIOUS
+EXTEND %{
+noBS = (SCATTERED) ? 0 : 1;
+analyzer = (SCATTERED) ? 0 : -1;
+%}
+
+// ============================ SCATTERING ANGLE REORIENTATION ======================  
+COMPONENT DetAngle20 = Arm() WHEN 2==cassette && 0==analyzer AT (0, 0, 0) RELATIVE AnaPoint20 ROTATED (0, -(2*TAS[0]), 0) RELATIVE AnaArm20
+// =================================== DETECTOR ==================================== 
+COMPONENT DetPoint20 = Arm() WHEN 2==cassette && 0==analyzer AT (0, 0, params_distances[2][0][1]) RELATIVE DetAngle20
+COMPONENT PSD20 = PSD_monitor(nx=140, ny=90, filename="PSD20.dat", restore_neutron=1,
+                              xwidth=2.1*params_detector[2][0][1][1][1],
+                              yheight=2.1*params_detector[2][0][1][1][1]
+) WHEN 2==cassette && 0==analyzer AT (0, 0, 0) RELATIVE DetPoint20
+
+
+// Cassette 2 Analyzer 0 Triplet Detectors & Event recorders
+
+COMPONENT Triplet20 = Detector_triplet(filename="triplet20.dat", charge_a=charge_a_name, charge_b=charge_b_name, detection_time=detection_time_name,
+  radius = detdiam / 2,
+  x0 = params_detector[2][0][0][0], e0 = params_detector[2][0][0][1],
+  x1 = params_detector[2][0][1][0], e1 = params_detector[2][0][1][1],
+  x2 = params_detector[2][0][2][0], e2 = params_detector[2][0][2][1])
+WHEN 2==cassette && 0==analyzer AT (0, 0, 0) RELATIVE DetPoint20
+EXTEND
+%{
+  flag = (SCATTERED) ? 1 : 0;
+%}
+COMPONENT Events20 = Monitor_nD(xwidth=2.1*params_detector[2][0][1][1][1], yheight=2.1*params_detector[2][0][1][1][1],
+  user1=charge_a_name, username1="A", user2=charge_b_name, username2="B", user3=detection_time_name, username3="T", options=nd_options)
+WHEN 1==flag && 2==cassette && 0==analyzer AT (0, 0, params_detector[2][0][1][1][1]) RELATIVE PREVIOUS
+

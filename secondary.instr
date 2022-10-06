@@ -1,0 +1,102 @@
+DEFINE INSTRUMENT BIFROST-secondary (
+Mos=60,
+detdiam = 0.0127,
+sampleSizeX=0.001, // Width of monitors at sample position. Guide optimized for up to 0.015, intruments optimized for 0.001 to 0.01.
+sampleSizeY=0.001, // Height of monitors at sample position. Guide optimized for up to 0.015, intruments optimized for 0.001 to 0.01.
+slitSizeX=0.001,
+slitAngle=2,
+slitDistance=0.4,
+focus_choice=0,
+focus_radius=0,
+construction=0
+)
+SHELL "sh Multi_Source.sh; sh Multi_Cassette.sh"
+DEPENDENCY " -DUSE_OFF "
+DECLARE
+%{
+const double analyzer_energy_meV[5] = {2.7, 3.2, 3.7, 4.4, 5.0};
+double TAS[5];
+double deltaEnergy;
+double middleEnergy;
+double focusdistance;
+int analyzer;
+int cassette;
+int noBS;
+int noSlit;
+char focus_type[10];
+const char* charge_a_name="event_charge_left";
+const char* charge_b_name="event_charge_right";
+const char* detection_time_name="event_time";
+const char* nd_options="list energy t user1 user2 user3";
+
+const int selected_cassette=0;
+const int selected_analyzer=0;
+%}
+
+USERVARS %{
+double flag;
+double event_charge_left;
+double event_charge_right;
+double event_time;
+%}
+
+INITIALIZE
+%{
+if (focus_choice == 1) sprintf(focus_type,"parallel");
+else if (focus_choice == 2) sprintf(focus_type, "point");
+else if (focus_choice == 3) sprintf(focus_type, "exact");
+
+for (int i=0; i<5; ++i) TAS[i] = RAD2DEG*asin(9.0446/(sqrt(analyzer_energy_meV[i])*2.0*3.355));
+
+double minimum=1000., maximum=0, delta=0;
+
+for (int i=0; i<5; ++i){
+  if (analyzer_energy_meV[i] < minimum) minimum = analyzer_energy_meV[i];
+  if (analyzer_energy_meV[i] > maximum) maximum = analyzer_energy_meV[i];
+  double tmp = 3 * tan(TAS[i] * DEG2RAD) * tan(TAS[i] * DEG2RAD) * (Mos * MIN2RAD) * analyzer_energy_meV[i];
+  if (tmp > delta) delta = tmp;  
+}
+deltaEnergy = (maximum - minimum) + delta;
+middleEnergy = (maximum + minimum) / 2;
+printf("Incident neutrons over (%f, %f) meV\n", middleEnergy-deltaEnergy/2., middleEnergy+deltaEnergy/2.);
+
+focusdistance = 1e9;
+for (int c=0; c<3; ++c) for (int i=0; i<5; ++i)
+if (params_distances[c][i][0] < focusdistance) focusdistance = params_distances[c][i][0];
+
+
+for (int i=0; i<5; ++i) TAS[i] = RAD2DEG*asin(9.0446/(sqrt(analyzer_energy_meV[i])*2.0*3.355));
+%}
+TRACE
+
+%include "BIFROST_params.instr"
+/* ************** Origin ************** */
+COMPONENT Origin = Progress_bar() AT (0,0,0) ABSOLUTE
+EXTEND %{
+  noBS = 0;
+  noSlit = 1;
+  analyzer=-1;
+  cassette=(int)(rand01()*9.);
+%}
+/* ************** Sources ************** */
+%include "Multi_Source.snippet"
+/* *************** Slits *************** */
+COMPONENT Slits = Slit_radial_multi(slit_width=atan2(slitSizeX, slitDistance), offset=slitAngle*DEG2RAD, number=9, positions=params_channel, radius=slitDistance, height=0.2)
+AT (0, 0, 0) RELATIVE Origin
+EXTEND %{
+  if (SCATTERED) {
+    cassette = slit;
+    noBS = 1;
+  }
+%}
+/* ************* Cassettes ************* */
+%include "Multi_Cassette.snippet"
+
+// (Noisy) Broadcaster
+COMPONENT off_test = Shape(geometry="test_BIFROST_secondary.off") AT (0,0,0) ABSOLUTE
+  
+FINALLY
+%{
+%}
+END
+
