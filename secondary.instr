@@ -1,4 +1,4 @@
-DEFINE INSTRUMENT BIFROST-secondary (
+DEFINE INSTRUMENT BIFROST_secondary (
 Mos=60,
 detdiam = 0.0127,
 sampleSizeX=0.001, // Width of monitors at sample position. Guide optimized for up to 0.015, intruments optimized for 0.001 to 0.01.
@@ -8,7 +8,9 @@ slitAngle=2,
 slitDistance=0.4,
 focus_choice=0,
 focus_radius=0,
-construction=0
+construction=0,
+string address = "127.0.0.1",
+int broadcast = 0
 )
 SHELL "sh Multi_Source.sh; sh Multi_Cassette.sh"
 DEPENDENCY " -DUSE_OFF "
@@ -18,7 +20,6 @@ const double analyzer_energy_meV[5] = {2.7, 3.2, 3.7, 4.4, 5.0};
 double TAS[5];
 double deltaEnergy;
 double middleEnergy;
-double focusdistance;
 int analyzer;
 int cassette;
 int noBS;
@@ -35,37 +36,33 @@ const int selected_analyzer=0;
 
 USERVARS %{
 double flag;
-double event_charge_left;
-double event_charge_right;
+int event_charge_left;
+int event_charge_right;
 double event_time;
+int RING;
+int FEN;
+int TUBE;
 %}
 
 INITIALIZE
 %{
+
 if (focus_choice == 1) sprintf(focus_type,"parallel");
 else if (focus_choice == 2) sprintf(focus_type, "point");
 else if (focus_choice == 3) sprintf(focus_type, "exact");
 
-for (int i=0; i<5; ++i) TAS[i] = RAD2DEG*asin(9.0446/(sqrt(analyzer_energy_meV[i])*2.0*3.355));
-
 double minimum=1000., maximum=0, delta=0;
-
 for (int i=0; i<5; ++i){
   if (analyzer_energy_meV[i] < minimum) minimum = analyzer_energy_meV[i];
   if (analyzer_energy_meV[i] > maximum) maximum = analyzer_energy_meV[i];
-  double tmp = 3 * tan(TAS[i] * DEG2RAD) * tan(TAS[i] * DEG2RAD) * (Mos * MIN2RAD) * analyzer_energy_meV[i];
-  if (tmp > delta) delta = tmp;  
+  double tmp = tan(asin(9.0446/(sqrt(analyzer_energy_meV[i])*2.0*3.355)));
+  tmp = 3 * tmp * tmp * (Mos * MIN2RAD) * analyzer_energy_meV[i];
+  if (tmp > delta) delta = tmp;
 }
 deltaEnergy = (maximum - minimum) + delta;
 middleEnergy = (maximum + minimum) / 2;
 printf("Incident neutrons over (%f, %f) meV\n", middleEnergy-deltaEnergy/2., middleEnergy+deltaEnergy/2.);
 
-focusdistance = 1e9;
-for (int c=0; c<3; ++c) for (int i=0; i<5; ++i)
-if (params_distances[c][i][0] < focusdistance) focusdistance = params_distances[c][i][0];
-
-
-for (int i=0; i<5; ++i) TAS[i] = RAD2DEG*asin(9.0446/(sqrt(analyzer_energy_meV[i])*2.0*3.355));
 %}
 TRACE
 
@@ -77,10 +74,14 @@ EXTEND %{
   noSlit = 1;
   analyzer=-1;
   cassette=(int)(rand01()*9.);
+  cassette=1;
+  noBS = 1;
 %}
 /* ************** Sources ************** */
 %include "Multi_Source.snippet"
+
 /* *************** Slits *************** */
+/*
 COMPONENT Slits = Slit_radial_multi(slit_width=atan2(slitSizeX, slitDistance), offset=slitAngle*DEG2RAD, number=9, positions=params_channel, radius=slitDistance, height=0.2)
 AT (0, 0, 0) RELATIVE Origin
 EXTEND %{
@@ -89,11 +90,34 @@ EXTEND %{
     noBS = 1;
   }
 %}
+*/
 /* ************* Cassettes ************* */
 %include "Multi_Cassette.snippet"
 
-// (Noisy) Broadcaster
-COMPONENT off_test = Shape(geometry="test_BIFROST_secondary.off") AT (0,0,0) ABSOLUTE
+
+/****************** READOUT ***********************/
+
+COMPONENT ids = Progress_bar() WHEN flag == 1 AT (0,0,0) ABSOLUTE
+EXTEND %{
+RING = (int)(rand01() * 2) + 2 * (int)(cassette/3); // RING is [(0,1), (2,3), (4,5), ...] for [0, 1, 2, ...]
+TUBE = (cassette - 3 * (int)(cassette/3)) + 3 * analyzer;
+FEN = 0; // always 0 for BIFROST
+//printf("(%2d %2d %2d) %5d %5d\n", RING, FEN, TUBE, event_charge_left, event_charge_right);
+%}
+
+COMPONENT master = Readout_BIFROST(
+  event_mode="p",
+  ring="RING", fen="FEN", tube="TUBE", a="event_charge_left", b="event_charge_right", ip=address, broadcast=broadcast,
+  receiver="/home/g/Code/event-formation-unit/build/bin/efu",
+  options="--det /home/g/Code/event-formation-unit/build/modules/bifrost.so --nohwcheck --cmdport 10888")
+WHEN flag == 1 AT (0,0,0) ABSOLUTE
+/*
+COMPONENT vinROT2 = Arm() AT(0,0,0) ABSOLUTE ROTATED (0,-90,0) ABSOLUTE
+
+COMPONENT vinROT1 = Arm() AT(0,0,0) RELATIVE PREVIOUS ROTATED (-90,0,0) RELATIVE PREVIOUS
+
+COMPONENT off_file = Shape2(geometry="2022-10-21_BIFROST_secondary.off", center=0) AT (0,0,0) RELATIVE PREVIOUS
+*/
   
 FINALLY
 %{
